@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-01-PLAN.md — pw2agent script written and verified
-last_updated: "2026-04-24T00:54:37.144Z"
+stopped_at: Completed 01-02-PLAN.md — install.sh written, ShellCheck clean, idempotency verified
+last_updated: "2026-04-24T00:57:35.880Z"
 last_activity: 2026-04-24 — Roadmap created (2 phases)
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 50
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 0 of ? in current phase
 Status: Ready to plan
 Last activity: 2026-04-24 — Roadmap created (2 phases)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [█████░░░░░] 50%
 
 *Updated after each plan completion*
 | Phase 01-working-tool P01 | 1 | 1 tasks | 1 files |
+| Phase 01-working-tool P02 | 1 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Recent decisions affecting current work:
 - base64 -d < file (stdin redirect) in NOTE — cross-platform macOS/GNU
 - trap disarmed at script end so file persists for agent to read
 - { set +x; } 2>/dev/null on line 3 prevents xtrace leaking secret
+- SC2016 suppressed inline on PATH_LINE — single-quoting is intentional to defer $HOME expansion to write time
+- main() guard pattern: all install side-effects inside main(), called as last line — safe for partial curl|bash
+- grep -qF literal match for idempotency guard — more precise than regex for comment marker matching
 
 ### Pending Todos
 
@@ -87,8 +91,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T00:54:37.139Z
-Stopped at: Completed 01-01-PLAN.md — pw2agent script written and verified
+Last session: 2026-04-24T00:57:35.877Z
+Stopped at: Completed 01-02-PLAN.md — install.sh written, ShellCheck clean, idempotency verified
 Resume file: None
 
 **Next action:** `/gsd-plan-phase 1`

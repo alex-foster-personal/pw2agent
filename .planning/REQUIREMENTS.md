@@ -23,10 +23,14 @@
 
 ### Install & Setup (INST)
 
-- [ ] **INST-01**: `install.sh` copies `pw2agent` to `~/.local/bin/pw2agent` (chmod +x)
-- [ ] **INST-02**: `install.sh` appends `export PATH="$HOME/.local/bin:$PATH"` to `~/.zshrc` with `grep -qF` idempotency guard (marker: `# pw2agent`)
-- [ ] **INST-03**: `install.sh` wraps all logic in `main()`, called as last line (safe for curl|sh partial download)
-- [ ] **INST-04**: `install.sh` prints "✅ Ready. Run: pw2agent" on success
+- [x] **INST-01
+**: `install.sh` copies `pw2agent` to `~/.local/bin/pw2agent` (chmod +x)
+- [x] **INST-02
+**: `install.sh` appends `export PATH="$HOME/.local/bin:$PATH"` to `~/.zshrc` with `grep -qF` idempotency guard (marker: `# pw2agent`)
+- [x] **INST-03
+**: `install.sh` wraps all logic in `main()`, called as last line (safe for curl|sh partial download)
+- [x] **INST-04
+**: `install.sh` prints "✅ Ready. Run: pw2agent" on success
 
 ### Agent Skill (SKIL)
 
