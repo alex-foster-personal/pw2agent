@@ -7,7 +7,7 @@ Hand a secret to an AI agent without pasting it in chat.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/agdfoster/pw2agent/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alexfosterinvisible/pw2agent/main/install.sh | bash
 ```
 
 ## Usage
@@ -32,7 +32,7 @@ To teach Claude Code the pw2agent workflow:
 
 ```bash
 mkdir -p ~/.claude/skills/pw2agent
-curl -fsSL https://raw.githubusercontent.com/agdfoster/pw2agent/main/skill.md \
+curl -fsSL https://raw.githubusercontent.com/alexfosterinvisible/pw2agent/main/skill.md \
   -o ~/.claude/skills/pw2agent/SKILL.md
 ```
 

@@ -4,7 +4,7 @@ set -euo pipefail
 # ---- config ----
 INSTALL_DIR="$HOME/.local/bin"
 SCRIPT_NAME="pw2agent"
-GITHUB_RAW="https://raw.githubusercontent.com/agdfoster/pw2agent/main"
+GITHUB_RAW="https://raw.githubusercontent.com/alexfosterinvisible/pw2agent/main"
 # shellcheck disable=SC2016
 PATH_LINE='export PATH="$HOME/.local/bin:$PATH" # pw2agent'
 
