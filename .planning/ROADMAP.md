@@ -20,7 +20,11 @@ From a working source script to a published OSS tool. Phase 1 delivers a correct
   2. A "NOTE FOR AGENT" block (with path, base64 read command, rm instruction) is on the clipboard or printed to stdout on headless systems
   3. Running `bash install.sh` twice leaves exactly one PATH line in `~/.zshrc` and prints "Ready. Run: pw2agent"
   4. Script passes ShellCheck with zero warnings on macOS and Linux
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Write pw2agent script (CORE-01 through CORE-08): single executable bash script, under 80 lines, ShellCheck-clean, base64 write, trap cleanup, --help flag, clipboard fallback chain
+- [ ] 01-02-PLAN.md — Write install.sh (INST-01 through INST-04): idempotent installer, all logic in main(), grep guard prevents duplicate .zshrc lines, success message, human-verify checkpoint
 
 ### Phase 2: OSS Release
 **Goal**: The repo is ready to publish — a stranger can find it on GitHub, install it in one curl command, and wire it into Claude Code via the skill file.
@@ -38,5 +42,5 @@ From a working source script to a published OSS tool. Phase 1 delivers a correct
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Working Tool | 0/? | Not started | - |
+| 1. Working Tool | 0/2 | Not started | - |
 | 2. OSS Release | 0/? | Not started | - |
