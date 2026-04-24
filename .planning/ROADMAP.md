@@ -6,7 +6,7 @@ From a working source script to a published OSS tool. Phase 1 delivers a correct
 
 ## Phases
 
-- [ ] **Phase 1: Working Tool** - Script audited, installable, and usable on macOS + Linux
+- [x] **Phase 1: Working Tool** - Script audited, installable, and usable on macOS + Linux ✅ 2026-04-24
 - [ ] **Phase 2: OSS Release** - README with demo, skill file, LICENSE — everything needed to publish
 
 ## Phase Details
@@ -23,8 +23,8 @@ From a working source script to a published OSS tool. Phase 1 delivers a correct
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Write pw2agent script (CORE-01 through CORE-08): single executable bash script, under 80 lines, ShellCheck-clean, base64 write, trap cleanup, --help flag, clipboard fallback chain
-- [ ] 01-02-PLAN.md — Write install.sh (INST-01 through INST-04): idempotent installer, all logic in main(), grep guard prevents duplicate .zshrc lines, success message, human-verify checkpoint
+- [x] 01-01-PLAN.md — Write pw2agent script (CORE-01 through CORE-08): single executable bash script, under 80 lines, ShellCheck-clean, base64 write, trap cleanup, --help flag, clipboard fallback chain
+- [x] 01-02-PLAN.md — Write install.sh (INST-01 through INST-04): idempotent installer, all logic in main(), grep guard prevents duplicate .zshrc lines, success message, human-verify checkpoint
 
 ### Phase 2: OSS Release
 **Goal**: The repo is ready to publish — a stranger can find it on GitHub, install it in one curl command, and wire it into Claude Code via the skill file.
@@ -42,5 +42,5 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Working Tool | 0/2 | Not started | - |
+| 1. Working Tool | 2/2 | Complete ✅ | 2026-04-24 |
 | 2. OSS Release | 0/? | Not started | - |
