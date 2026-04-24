@@ -42,6 +42,7 @@ fi
 umask 077
 trap 'rm -f "$TARGET"' EXIT INT TERM
 printf '%s' "$PW1" | base64 | tr -d '\n' > "$TARGET"
+trap - EXIT INT TERM
 unset PW1 PW2
 
 # ---- confirm ----
@@ -77,4 +78,3 @@ if _copy_to_clipboard "$AGENT_NOTE"; then
 else
   printf '[No clipboard tool found — copy the NOTE above manually.]\n' >&2
 fi
-trap - EXIT INT TERM
