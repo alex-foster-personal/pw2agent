@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+{ set +x; } 2>/dev/null
+
+# ---- help ----
+case "${1:-}" in
+  -h|--help)
+    printf 'Usage: pw2agent [label]\n'
+    printf '  label  name for the secret (default: secret)\n'
+    printf '         writes to ~/.{label}_pw, mode 600\n'
+    printf '\nExamples:\n'
+    printf '  pw2agent            # stashes as ~/.secret_pw\n'
+    printf '  pw2agent api_key    # stashes as ~/.api_key_pw\n'
+    exit 0
+    ;;
+esac
+
+# ---- config ----
+LABEL="${1:-secret}"
+TARGET="$HOME/.${LABEL}_pw"
+
+# ---- banner ----
+printf '\npw2agent: stashing "%s" → %s\n\n' "$LABEL" "$TARGET"
+
+# ---- input ----
+printf 'Enter secret:   '; read -rs PW1; printf '\n'
+printf 'Confirm secret: '; read -rs PW2; printf '\n'
+
+# ---- validate ----
+if [[ "$PW1" != "$PW2" ]]; then
+    printf '❌ Secrets don'\''t match. Nothing written.\n' >&2
+    unset PW1 PW2
+    exit 1
+fi
+if [[ -z "$PW1" ]]; then
+    printf '❌ Empty secret. Nothing written.\n' >&2
+    unset PW1 PW2
+    exit 1
+fi
+
+# ---- write ----
+umask 077
+printf '%s' "$PW1" | base64 > "$TARGET"
+trap 'rm -f "$TARGET"' EXIT INT TERM
+unset PW1 PW2
+
+# ---- confirm ----
+BYTES=$(wc -c < "$TARGET")
+MODE=$(stat -f '%Lp' "$TARGET" 2>/dev/null || stat -c '%a' "$TARGET")
+printf '✅ Stashed at: %s (%s bytes, mode %s)\n\n' "$TARGET" "$BYTES" "$MODE"
+
+# ---- note ----
+AGENT_NOTE="NOTE FOR AGENT — secret handoff
+  Label:   ${LABEL}
+  File:    ~/.${LABEL}_pw    (mode 600, base64-encoded)
+  Read:    PWB64=\$(base64 -d < ~/.${LABEL}_pw | tr -d '\n')
+  Delete:  rm -f ~/.${LABEL}_pw"
+
+printf '%s\n\n' "$AGENT_NOTE"
+
+# ---- clipboard ----
+_copy_to_clipboard() {
+  local note="$1"
+  if command -v pbcopy &>/dev/null; then
+    printf '%s' "$note" | pbcopy
+  elif [ -n "${DISPLAY:-}" ] && command -v xclip &>/dev/null; then
+    printf '%s' "$note" | xclip -selection clipboard
+  elif [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wl-copy &>/dev/null; then
+    printf '%s' "$note" | wl-copy
+  else
+    return 1
+  fi
+}
+
+if _copy_to_clipboard "$AGENT_NOTE"; then
+  printf '📋 NOTE copied to clipboard. Paste into your agent.\n'
+else
+  printf '[No clipboard tool found — copy the NOTE above manually.]\n' >&2
+fi
+trap - EXIT INT TERM
