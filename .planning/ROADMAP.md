@@ -35,12 +35,15 @@ Plans:
   2. `skill.md` loads in Claude Code and the slash command description reads "use when you need to give an agent a pw without them seeing it"
   3. MIT `LICENSE` file is present at repo root
   4. A user who has never heard of pw2agent can understand what it does and install it within 60 seconds of landing on the repo
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Patch install.sh for curl-mode + write skill.md + write LICENSE (SKIL-01, SKIL-02, SKIL-03, DIST-03): curl-mode BASH_SOURCE detection, agentskills.io skill file, MIT license
+- [ ] 02-02-PLAN.md — Write demo.tape + generate demo.gif + write README.md (DIST-01, DIST-02): VHS tape source, recorded gif, complete OSS readme with gif-first layout
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Working Tool | 2/2 | Complete ✅ | 2026-04-24 |
-| 2. OSS Release | 0/? | Not started | - |
+| 2. OSS Release | 0/2 | Not started | - |
