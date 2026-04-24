@@ -60,7 +60,21 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| CORE-01 → CORE-08 | Phase 1 | Pending |
-| INST-01 → INST-04 | Phase 1 | Pending |
-| SKIL-01 → SKIL-03 | Phase 2 | Pending |
-| DIST-01 → DIST-03 | Phase 2 | Pending |
+| CORE-01 | Phase 1 | Pending |
+| CORE-02 | Phase 1 | Pending |
+| CORE-03 | Phase 1 | Pending |
+| CORE-04 | Phase 1 | Pending |
+| CORE-05 | Phase 1 | Pending |
+| CORE-06 | Phase 1 | Pending |
+| CORE-07 | Phase 1 | Pending |
+| CORE-08 | Phase 1 | Pending |
+| INST-01 | Phase 1 | Pending |
+| INST-02 | Phase 1 | Pending |
+| INST-03 | Phase 1 | Pending |
+| INST-04 | Phase 1 | Pending |
+| SKIL-01 | Phase 2 | Pending |
+| SKIL-02 | Phase 2 | Pending |
+| SKIL-03 | Phase 2 | Pending |
+| DIST-01 | Phase 2 | Pending |
+| DIST-02 | Phase 2 | Pending |
+| DIST-03 | Phase 2 | Pending |
