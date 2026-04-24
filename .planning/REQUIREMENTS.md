@@ -34,15 +34,19 @@
 
 ### Agent Skill (SKIL)
 
-- [ ] **SKIL-01**: `skill.md` uses agentskills.io SKILL.md format with `name: pw2agent` and `description:` frontmatter
-- [ ] **SKIL-02**: Skill description is exactly: "use when you need to give an agent a pw without them seeing it"
-- [ ] **SKIL-03**: Skill body contains minimal agent instructions: read path from NOTE, `base64 -d` the file, use value, `rm -f` the file when done
+- [x] **SKIL-01
+**: `skill.md` uses agentskills.io SKILL.md format with `name: pw2agent` and `description:` frontmatter
+- [x] **SKIL-02
+**: Skill description is exactly: "use when you need to give an agent a pw without them seeing it"
+- [x] **SKIL-03
+**: Skill body contains minimal agent instructions: read path from NOTE, `base64 -d` the file, use value, `rm -f` the file when done
 
 ### Distribution (DIST)
 
 - [ ] **DIST-01**: README opens with gif/screenshot demo (VHS .tape file committed; recorded output at top of README)
 - [ ] **DIST-02**: README contains: one-liner curl install, basic usage, 2-sentence "what it does", skill install blurb
-- [ ] **DIST-03**: MIT `LICENSE` file at repo root
+- [x] **DIST-03
+**: MIT `LICENSE` file at repo root
 
 ---
 

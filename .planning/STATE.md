@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-02-PLAN.md — install.sh written, ShellCheck clean, idempotency verified
-last_updated: "2026-04-24T00:57:35.880Z"
-last_activity: 2026-04-24 — Roadmap created (2 phases)
+stopped_at: Completed 02-01-PLAN.md — install.sh curl-pipe mode, skill.md, LICENSE
+last_updated: "2026-04-24T01:16:21.840Z"
+last_activity: 2026-04-24 — Phase 1 complete (pw2agent + install.sh, all 12 requirements verified)
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_plans: 4
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 0 of ? in current phase
 Status: Phase 1 complete — ready to plan Phase 2
 Last activity: 2026-04-24 — Phase 1 complete (pw2agent + install.sh, all 12 requirements verified)
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [█████░░░░░] 50%
 *Updated after each plan completion*
 | Phase 01-working-tool P01 | 1 | 1 tasks | 1 files |
 | Phase 01-working-tool P02 | 1 | 1 tasks | 1 files |
+| Phase 02-oss-release P01 | 1 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,7 @@ Recent decisions affecting current work:
 - SC2016 suppressed inline on PATH_LINE — single-quoting is intentional to defer $HOME expansion to write time
 - main() guard pattern: all install side-effects inside main(), called as last line — safe for partial curl|bash
 - grep -qF literal match for idempotency guard — more precise than regex for comment marker matching
+- BASH_SOURCE[0] empty-string guard with adjacent-file check for curl-pipe detection in install.sh
 
 ### Pending Todos
 
@@ -91,8 +93,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T00:57:35.877Z
-Stopped at: Completed 01-02-PLAN.md — install.sh written, ShellCheck clean, idempotency verified
+Last session: 2026-04-24T01:16:21.836Z
+Stopped at: Completed 02-01-PLAN.md — install.sh curl-pipe mode, skill.md, LICENSE
 Resume file: None
 
 **Next action:** `/gsd-plan-phase 2`
