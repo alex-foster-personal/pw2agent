@@ -21,12 +21,10 @@ Run `pw2agent --help` for options.
 
 ## How it works
 
-pw2agent prompts twice for your secret (silent input, no echo), writes it to a
-mode-600 file, and copies a NOTE FOR AGENT block to your clipboard. Paste the
-note into your agent's chat — the agent reads the file, uses the secret, and
-deletes it.
-
-No network calls. No config files. No dependencies. One 80-line bash script.
+pw2agent prompts twice for your secret (silent input, no echo) and writes it
+base64-encoded to a mode-600 file. A NOTE FOR AGENT block with the path, read
+command, and delete command is placed on your clipboard for you to paste into
+the agent.
 
 ## Claude Code skill
 
@@ -46,6 +44,7 @@ Then paste a NOTE FOR AGENT block into Claude Code and it handles the rest.
 - File is mode 600 (owner-read-only)
 - NOTE FOR AGENT includes an explicit `rm -f` delete step
 - No network calls, no logs, no dependencies
+- Base64 is used to survive shell-unsafe bytes — it is encoding, not encryption. Confidentiality comes from the mode-600 file and the `rm -f` step, not the encoding.
 
 ## License
 

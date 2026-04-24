@@ -40,8 +40,8 @@ fi
 
 # ---- write ----
 umask 077
-printf '%s' "$PW1" | base64 > "$TARGET"
 trap 'rm -f "$TARGET"' EXIT INT TERM
+printf '%s' "$PW1" | base64 | tr -d '\n' > "$TARGET"
 unset PW1 PW2
 
 # ---- confirm ----
