@@ -4,14 +4,22 @@
 
 ### Core Script (CORE)
 
-- [ ] **CORE-01**: User can run `pw2agent [label]` and be prompted twice for a secret with no echo (`read -rs`, not `read -s -p`)
-- [ ] **CORE-02**: Script writes secret to `~/.{label}_pw` (default label: `secret`) with mode 600, single line, no trailing newline
-- [ ] **CORE-03**: Script exits with error if passwords don't match or if secret is empty; nothing written
-- [ ] **CORE-04**: Script copies NOTE FOR AGENT block to clipboard via pbcopy/xclip/wl-copy fallback chain; prints NOTE to stdout if no clipboard tool available
-- [ ] **CORE-05**: NOTE FOR AGENT contains: label, file path, base64 read command, rm delete instruction — plain English, no secret encoded
-- [ ] **CORE-06**: Script uses `trap ... EXIT` immediately after writing file so temp state is cleaned on any error path
-- [ ] **CORE-07**: Script uses `rm -f` (not `rm -P`) — `rm -P` is a documented no-op on macOS 14+
-- [ ] **CORE-08**: Script supports `--help` / `-h` flag with short usage
+- [x] **CORE-01
+**: User can run `pw2agent [label]` and be prompted twice for a secret with no echo (`read -rs`, not `read -s -p`)
+- [x] **CORE-02
+**: Script writes secret to `~/.{label}_pw` (default label: `secret`) with mode 600, single line, no trailing newline
+- [x] **CORE-03
+**: Script exits with error if passwords don't match or if secret is empty; nothing written
+- [x] **CORE-04
+**: Script copies NOTE FOR AGENT block to clipboard via pbcopy/xclip/wl-copy fallback chain; prints NOTE to stdout if no clipboard tool available
+- [x] **CORE-05
+**: NOTE FOR AGENT contains: label, file path, base64 read command, rm delete instruction — plain English, no secret encoded
+- [x] **CORE-06
+**: Script uses `trap ... EXIT` immediately after writing file so temp state is cleaned on any error path
+- [x] **CORE-07
+**: Script uses `rm -f` (not `rm -P`) — `rm -P` is a documented no-op on macOS 14+
+- [x] **CORE-08
+**: Script supports `--help` / `-h` flag with short usage
 
 ### Install & Setup (INST)
 
