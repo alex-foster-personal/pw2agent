@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 Phase: 2 of 2 (OSS Release)
 Plan: 0 of ? in current phase
-Status: Phase 1 complete — ready to plan Phase 2
-Last activity: 2026-04-24 — Phase 1 complete (pw2agent + install.sh, all 12 requirements verified)
+Status: Both phases complete — ready to publish
+Last activity: 2026-04-24 — Phase 2 complete (skill.md, demo.gif, README.md, LICENSE — all 18 requirements verified)
 
 Progress: [██████████] 100%
 
@@ -101,4 +101,4 @@ Last session: 2026-04-24T01:22:37.109Z
 Stopped at: Completed 02-02-PLAN.md
 Resume file: None
 
-**Next action:** `/gsd-plan-phase 2`
+**Next action:** Create GitHub repo at github.com/agdfoster/pw2agent, push, verify curl install works on a fresh machine
