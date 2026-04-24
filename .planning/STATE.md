@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 02-01-PLAN.md — install.sh curl-pipe mode, skill.md, LICENSE
-last_updated: "2026-04-24T01:16:21.840Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-04-24T01:22:37.113Z"
 last_activity: 2026-04-24 — Phase 1 complete (pw2agent + install.sh, all 12 requirements verified)
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
-  percent: 75
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 0 of ? in current phase
 Status: Phase 1 complete — ready to plan Phase 2
 Last activity: 2026-04-24 — Phase 1 complete (pw2agent + install.sh, all 12 requirements verified)
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [████████░░] 75%
 | Phase 01-working-tool P01 | 1 | 1 tasks | 1 files |
 | Phase 01-working-tool P02 | 1 | 1 tasks | 1 files |
 | Phase 02-oss-release P01 | 1 | 3 tasks | 3 files |
+| Phase 02-oss-release P02 | 3 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,9 @@ Recent decisions affecting current work:
 - main() guard pattern: all install side-effects inside main(), called as last line — safe for partial curl|bash
 - grep -qF literal match for idempotency guard — more precise than regex for comment marker matching
 - BASH_SOURCE[0] empty-string guard with adjacent-file check for curl-pipe detection in install.sh
+- demo.tape uses Hide/Show pattern — no real secret committed; VHS Hide/Show is the standard for security tool demos
+- chromium cask required for VHS headless rendering on this machine — not pulled in automatically by brew install vhs
+- README first line is bare image reference before h1 — matches DIST-01 exactly; gif-first layout for immediate visual impact
 
 ### Pending Todos
 
@@ -93,8 +97,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T01:16:21.836Z
-Stopped at: Completed 02-01-PLAN.md — install.sh curl-pipe mode, skill.md, LICENSE
+Last session: 2026-04-24T01:22:37.109Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
 
 **Next action:** `/gsd-plan-phase 2`

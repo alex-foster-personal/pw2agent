@@ -7,7 +7,7 @@ From a working source script to a published OSS tool. Phase 1 delivers a correct
 ## Phases
 
 - [x] **Phase 1: Working Tool** - Script audited, installable, and usable on macOS + Linux ✅ 2026-04-24
-- [ ] **Phase 2: OSS Release** - README with demo, skill file, LICENSE — everything needed to publish
+- [x] **Phase 2: OSS Release** - README with demo, skill file, LICENSE — everything needed to publish ✅ 2026-04-24
 
 ## Phase Details
 
@@ -38,12 +38,12 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Patch install.sh for curl-mode + write skill.md + write LICENSE (SKIL-01, SKIL-02, SKIL-03, DIST-03): curl-mode BASH_SOURCE detection, agentskills.io skill file, MIT license
-- [ ] 02-02-PLAN.md — Write demo.tape + generate demo.gif + write README.md (DIST-01, DIST-02): VHS tape source, recorded gif, complete OSS readme with gif-first layout
+- [x] 02-01-PLAN.md — Patch install.sh for curl-mode + write skill.md + write LICENSE (SKIL-01, SKIL-02, SKIL-03, DIST-03): curl-mode BASH_SOURCE detection, agentskills.io skill file, MIT license
+- [x] 02-02-PLAN.md — Write demo.tape + generate demo.gif + write README.md (DIST-01, DIST-02): VHS tape source, recorded gif, complete OSS readme with gif-first layout
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Working Tool | 2/2 | Complete ✅ | 2026-04-24 |
-| 2. OSS Release | 0/2 | Not started | - |
+| 2. OSS Release | 2/2 | Complete ✅ | 2026-04-24 |

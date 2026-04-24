@@ -43,8 +43,10 @@
 
 ### Distribution (DIST)
 
-- [ ] **DIST-01**: README opens with gif/screenshot demo (VHS .tape file committed; recorded output at top of README)
-- [ ] **DIST-02**: README contains: one-liner curl install, basic usage, 2-sentence "what it does", skill install blurb
+- [x] **DIST-01
+**: README opens with gif/screenshot demo (VHS .tape file committed; recorded output at top of README)
+- [x] **DIST-02
+**: README contains: one-liner curl install, basic usage, 2-sentence "what it does", skill install blurb
 - [x] **DIST-03
 **: MIT `LICENSE` file at repo root
 
