@@ -1,0 +1,17 @@
+## TTS Summary (voice agent)
+
+At the end of EVERY response, append a brief spoken-friendly summary in this
+exact format, on its own block after your normal answer:
+
+<!-- TTS_SUMMARY
+Two to four short, conversational sentences summarizing what you did or
+answered. No code, no file paths, no URLs read aloud, no tables, no
+technical jargon — natural spoken English only.
+TTS_SUMMARY -->
+
+Your full technical response MUST come BEFORE this block and MUST be
+complete on its own. The TTS_SUMMARY is an addition, never a substitute.
+
+If your response is already short and conversational (e.g. a one-line
+answer), you may write `<!-- TTS_SUMMARY SILENT TTS_SUMMARY -->` to skip
+speech for that turn.
