@@ -51,11 +51,13 @@ MODE=$(stat -f '%Lp' "$TARGET" 2>/dev/null || stat -c '%a' "$TARGET")
 printf '✅ Stashed at: %s (%s bytes, mode %s)\n\n' "$TARGET" "$BYTES" "$MODE"
 
 # ---- note ----
-AGENT_NOTE="NOTE FOR AGENT — secret handoff
-  Label:   ${LABEL}
-  File:    ~/.${LABEL}_pw    (mode 600, base64-encoded)
-  Read:    PWB64=\$(base64 -d < ~/.${LABEL}_pw | tr -d '\n')
-  Delete:  rm -f ~/.${LABEL}_pw"
+AGENT_NOTE="> NOTE FOR AGENT -- secret handoff
+> Label:    ${LABEL}
+> File:     ~/.${LABEL}_pw    (mode 600, base64-encoded, NOT encrypted)
+> Read:     PWB64=\$(base64 -d < ~/.${LABEL}_pw | tr -d '\n')
+> Rules:    never print the decoded value -- consume it inside the
+>           destination command (env/stdin) in a single shell call
+> Delete:   rm -f ~/.${LABEL}_pw"
 
 printf '%s\n\n' "$AGENT_NOTE"
 
