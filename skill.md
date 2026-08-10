@@ -55,4 +55,12 @@ than making the user report back.
 4. MCP tool parameters (send_message text, browser form-fill values) CANNOT
    stay private - the value unavoidably enters the transcript. If the task
    requires that, say so and let the user do that one step manually.
-5. When done: `rm -f ~/.secret_pw; unset PWB64`
+5. **Persist reusable secrets to Doppler.** If the secret is reusable (a
+   password, API key, token - anything with a life beyond this one command),
+   store it before deleting the stash, per the `doppler-secrets` skill's
+   golden rule (default `general`/`dev_personal`, descriptive
+   UPPERCASE_SNAKE name):
+   `base64 -d < ~/.secret_pw | ~/.claude/skills/doppler-secrets/scripts/store_secret.sh NAME general dev_personal`
+   Skip this only for genuinely one-off, non-reusable secrets (a single OTP,
+   a session token expiring in minutes) - and say why you're skipping it.
+6. When done: `rm -f ~/.secret_pw; unset PWB64`

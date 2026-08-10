@@ -51,12 +51,17 @@ MODE=$(stat -f '%Lp' "$TARGET" 2>/dev/null || stat -c '%a' "$TARGET")
 printf '✅ Stashed at: %s (%s bytes, mode %s)\n\n' "$TARGET" "$BYTES" "$MODE"
 
 # ---- note ----
+LABEL_UPPER=$(printf '%s' "$LABEL" | tr '[:lower:]' '[:upper:]')
 AGENT_NOTE="> NOTE FOR AGENT -- secret handoff
 > Label:    ${LABEL}
 > File:     ~/.${LABEL}_pw    (mode 600, base64-encoded, NOT encrypted)
 > Read:     PWB64=\$(base64 -d < ~/.${LABEL}_pw | tr -d '\n')
 > Rules:    never print the decoded value -- consume it inside the
 >           destination command (env/stdin) in a single shell call
+> Persist:  if reusable (not a one-off/session-only secret), also save it
+>           to Doppler before deleting -- descriptive UPPERCASE_SNAKE name
+>           (e.g. ${LABEL_UPPER}_PASSWORD), default general/dev_personal:
+>           base64 -d < ~/.${LABEL}_pw | ~/.claude/skills/doppler-secrets/scripts/store_secret.sh NAME general dev_personal
 > Delete:   rm -f ~/.${LABEL}_pw"
 
 printf '%s\n\n' "$AGENT_NOTE"
