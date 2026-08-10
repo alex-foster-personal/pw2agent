@@ -8,13 +8,36 @@ license: MIT
 
 Two sides: the user-side stash command, and the agent-side consumption protocol.
 
+Windows note: `pw2agent` is installed at `~/.local/bin/pw2agent` (on PATH in Git
+Bash). It is a bash script - the user must run it from Git Bash, not PowerShell.
+The clipboard step uses Windows `clip.exe`.
+
 ## Asking the user for a secret
 
-Never ask the user to paste a secret into chat. Tell them:
+Never ask the user to paste a secret into chat.
 
-> Run `pw2agent <label>` in your terminal - it consumes the secret (hidden input,
-> confirmed twice), stashes it at `~/.{label}_pw` (mode 600), and copies a NOTE
-> to your clipboard telling me how to use it without ever printing it.
+**Never run `pw2agent` yourself.** It is a user-side command: it reads from the
+terminal with `read -rs`, so with no TTY it hangs or fails, and any value it did
+capture would be yours rather than the user's. Invoking this skill to obtain a
+secret means one thing - emit the command for the user to run, then stop.
+
+Output exactly this, with a short label (it becomes `~/.{label}_pw`, so
+`pushcut`, not `pushcut_api_key_for_agent1`):
+
+````
+```bash
+pw2agent <label>
+```
+````
+
+One line of context is enough: it takes the secret with hidden input, confirms
+it twice, stashes it at `~/.{label}_pw` (mode 600), and copies a NOTE FOR AGENT
+to the clipboard to paste back. No preamble, no checking whether the stash
+already exists, no reading the pw2agent source.
+
+Optional, only when the wait would otherwise idle a long-running task: arm a
+background watcher on the stash path so you auto-resume when it appears, rather
+than making the user report back.
 
 ## Consuming a NOTE FOR AGENT block
 
