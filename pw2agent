@@ -6,14 +6,213 @@ set -euo pipefail
 case "${1:-}" in
   -h|--help)
     printf 'Usage: pw2agent [label]\n'
+    printf '       pw2agent --launch [label] [--timeout N] [--dry-run]\n\n'
     printf '  label  name for the secret (default: secret)\n'
-    printf '         writes to ~/.{label}_pw, mode 600\n'
+    printf '         writes to ~/.{label}_pw, mode 600\n\n'
+    printf 'Agent mode:\n'
+    printf '  --launch      open a terminal window running pw2agent, then block\n'
+    printf '                until the stash appears. For agents with no TTY: the\n'
+    printf '                user types the secret in the window, never in chat.\n'
+    printf '  --timeout N   seconds to wait for the stash (default 300)\n'
+    printf '  --autoclose N close the window N seconds after the secret is typed\n'
+    printf '                (default 60, 0 = leave it open). Never delays the agent.\n'
+    printf '  --dry-run     validate and clear a stale stash, but launch nothing\n\n'
+    printf '  Exit codes: 0 stash ready, 1 timed out, 2 no GUI terminal (a\n'
+    printf '  manual command is printed instead), 3 bad usage.\n'
+    printf '  --launch never reads or prints the secret itself.\n'
     printf '\nExamples:\n'
     printf '  pw2agent            # stashes as ~/.secret_pw\n'
     printf '  pw2agent api_key    # stashes as ~/.api_key_pw\n'
+    printf '  pw2agent --launch keychain --timeout 600\n'
     exit 0
     ;;
 esac
+
+#----------------------------------------------------------------- launch mode
+
+# `--launch` exists because an agent has no TTY: bare pw2agent uses `read -rs`,
+# which hangs or fails without one. Rather than making the user copy a command
+# out of chat, the agent opens a real terminal (which HAS a TTY) and waits. The
+# secret is typed there and never passes through the agent's process.
+_launch_mode() {
+  local label="secret" timeout=300 dry_run=false autoclose=60
+  local -a positional=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --launch)    shift ;;
+      --timeout)   timeout="${2:-}"; shift 2 || true ;;
+      --autoclose) autoclose="${2:-}"; shift 2 || true ;;
+      --dry-run)   dry_run=true; shift ;;
+      -*)          printf 'pw2agent: unknown option %s\n' "$1" >&2; exit 3 ;;
+      *)           positional+=("$1"); shift ;;
+    esac
+  done
+  [[ ${#positional[@]} -gt 0 ]] && label="${positional[0]}"
+
+  if ! [[ "$autoclose" =~ ^[0-9]+$ ]]; then
+    printf 'pw2agent: --autoclose must be a non-negative integer (0 = never)\n' >&2
+    exit 3
+  fi
+
+  # Label lands in a filename AND in an AppleScript/shell command, so anything
+  # outside this charset is refused rather than escaped. Fail fast, no guessing.
+  if ! [[ "$label" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    printf 'pw2agent: invalid label %q\n' "$label" >&2
+    printf '  labels must match [A-Za-z0-9_-]+ (it becomes a filename and a command)\n' >&2
+    exit 3
+  fi
+  if ! [[ "$timeout" =~ ^[0-9]+$ ]] || [[ "$timeout" -lt 1 ]]; then
+    printf 'pw2agent: --timeout must be a positive integer\n' >&2
+    exit 3
+  fi
+
+  local target="$HOME/.${label}_pw"
+
+  # A stale stash would satisfy the poll instantly and hand back an OLD secret,
+  # so it is removed before launching. This is why the poll can simply test for
+  # existence rather than tracking mtimes.
+  if [[ -e "$target" ]]; then
+    rm -f "$target"
+    printf 'pw2agent: cleared a pre-existing stash at ~/.%s_pw\n' "$label"
+  fi
+
+  local self
+  self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+
+  if [[ "$dry_run" == true ]]; then
+    printf 'pw2agent: [dry-run] would launch: %s %s\n' "$self" "$label"
+    return 0
+  fi
+
+  # The command is written to a mktemp stub rather than interpolated into
+  # AppleScript. mktemp paths are a safe charset, which removes the quoting and
+  # injection surface of nesting shell inside AppleScript inside shell.
+  local stub
+  stub="$(mktemp "${TMPDIR:-/tmp}/pw2agent_launch_XXXXXX")"
+  chmod 700 "$stub"
+  {
+    printf '#!/usr/bin/env bash\n'
+    printf 'rm -f %q\n' "$stub"
+    printf '%q %q\n' "$self" "$label"
+    printf 'rc=$?\n'
+    # The shell exits immediately rather than sleeping here. A window with a
+    # live process cannot be closed without macOS raising a "Terminate?"
+    # confirmation sheet, and that sheet blocks every later AppleScript close.
+    # Exiting leaves the output on screen with nothing running, so the delayed
+    # close below is silent.
+    printf 'exit $rc\n'
+  } > "$stub"
+
+  WINDOW_ID=""
+  if ! _open_terminal "$stub"; then
+    rm -f "$stub"
+    printf 'pw2agent: no GUI terminal available on this session.\n' >&2
+    printf '  Run this yourself in a terminal, then tell the agent:\n\n' >&2
+    printf '    pw2agent %s\n\n' "$label" >&2
+    exit 2
+  fi
+
+  printf 'pw2agent: terminal opened for "%s"; waiting up to %ss...\n' "$label" "$timeout"
+
+  local waited=0 rc=1
+  while [[ $waited -lt $timeout ]]; do
+    # Non-empty AND valid base64 = fully written. Decoding to /dev/null
+    # validates without the value ever reaching a stream.
+    if [[ -s "$target" ]] && base64 -d < "$target" >/dev/null 2>&1; then
+      printf 'pw2agent: [OK] stash ready at ~/.%s_pw (secret not read by this process)\n' "$label"
+      rc=0
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  if [[ $rc -eq 0 ]]; then
+    # Only on success. On timeout the window still has pw2agent waiting at its
+    # prompt: closing it would both yank a window the user may be typing into,
+    # and raise the "Terminate?" sheet that blocks every later close.
+    _schedule_close "$autoclose"
+  else
+    rm -f "$stub"
+    printf 'pw2agent: [TIMEOUT] no stash after %ss.\n' "$timeout" >&2
+    printf '  Window left open in case the user is still typing.\n' >&2
+    printf '  Re-run --launch, or ask the user to run: pw2agent %s\n' "$label" >&2
+  fi
+  return $rc
+}
+
+# Closes the launched window $1 seconds from now, in a detached process, so the
+# caller returns immediately. Closing by window id needs no tty lookup, and by
+# now the window has no running process, so no confirmation sheet appears.
+_schedule_close() {
+  local delay="$1"
+  [[ "$delay" -gt 0 ]] || return 0
+  [[ -n "${WINDOW_ID:-}" ]] || return 0
+  [[ "$(uname -s)" == "Darwin" ]] || return 0
+  command -v osascript >/dev/null 2>&1 || return 0
+  nohup bash -c "sleep $delay; osascript -e 'tell application \"Terminal\" to close (every window whose id is $WINDOW_ID) saving no'" \
+    </dev/null >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+  printf 'pw2agent: window will close in %ss\n' "$delay"
+}
+
+# Opens $1 in a GUI terminal. Returns non-zero if no terminal could be found,
+# which is the signal to fall back to printing a manual command.
+_open_terminal() {
+  local stub="$1"
+  [[ -n "${PW2AGENT_FORCE_NO_GUI:-}" ]] && return 1
+
+  case "$(uname -s)" in
+    Darwin)
+      # An agent usually runs outside the GUI (launchd "Background" domain), where
+      # a keychain/TTY prompt cannot be shown. osascript reaches the Aqua session
+      # anyway, which is what makes this work without restarting anything.
+      command -v osascript >/dev/null 2>&1 || return 1
+      # The window id comes back here so it can be closed later without a tty
+      # lookup (AppleScript's `whose` cannot filter on `tty of selected tab`).
+      WINDOW_ID="$(osascript 2>/dev/null <<APPLESCRIPT
+tell application "Terminal"
+  activate
+  do script "$stub"
+  return id of front window
+end tell
+APPLESCRIPT
+)" || return 1
+      [[ -n "$WINDOW_ID" ]] || return 1
+      # Terminal.app can open behind the current app; this pulls it forward.
+      osascript -e 'tell application "System Events" to set frontmost of process "Terminal" to true' >/dev/null 2>&1 || true
+      return 0
+      ;;
+    Linux)
+      [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] || return 1
+      local term
+      for term in x-terminal-emulator gnome-terminal konsole xfce4-terminal alacritty kitty xterm; do
+        if command -v "$term" >/dev/null 2>&1; then
+          "$term" -e "$stub" >/dev/null 2>&1 &
+          return 0
+        fi
+      done
+      return 1
+      ;;
+    MINGW*|MSYS*|CYGWIN*)
+      # Git Bash: cmd's `start` opens a new window running the stub under bash.
+      command -v cmd.exe >/dev/null 2>&1 || return 1
+      cmd.exe /c start "" bash "$(cygpath -w "$stub" 2>/dev/null || printf '%s' "$stub")" >/dev/null 2>&1 &
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+for arg in "$@"; do
+  if [[ "$arg" == "--launch" ]]; then
+    _launch_mode "$@"
+    exit $?
+  fi
+done
 
 # ---- config ----
 LABEL="${1:-secret}"
@@ -85,3 +284,7 @@ if _copy_to_clipboard "$AGENT_NOTE"; then
 else
   printf '[No clipboard tool found — copy the NOTE above manually.]\n' >&2
 fi
+
+# When launched by --launch, the agent is polling for the stash and will pick it
+# up on its own; the NOTE above is still printed so the manual flow is unchanged.
+printf '\nYou can close this window.\n'

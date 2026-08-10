@@ -16,13 +16,41 @@ The clipboard step uses Windows `clip.exe`.
 
 Never ask the user to paste a secret into chat.
 
-**Never run `pw2agent` yourself.** It is a user-side command: it reads from the
-terminal with `read -rs`, so with no TTY it hangs or fails, and any value it did
-capture would be yours rather than the user's. Invoking this skill to obtain a
-secret means one thing - emit the command for the user to run, then stop.
+**Default: run `--launch` and wait.** One call opens a real terminal window for
+the user, blocks while they type the secret, and returns when it is stashed:
 
-Output exactly this, with a short label (it becomes `~/.{label}_pw`, so
-`pushcut`, not `pushcut_api_key_for_agent1`):
+```bash
+pw2agent --launch <label> --timeout 600
+```
+
+Use a short label (it becomes `~/.{label}_pw`, so `pushcut`, not
+`pushcut_api_key_for_agent1`). Then consume the stash per the rules below -
+nothing needs pasting back, since you already know the path. Tell the user in
+one line that a window has opened and what to type into it.
+
+This works from an agent with no TTY because the *window* has one. On macOS it
+reaches the GUI session via `osascript` even when the agent runs in launchd's
+`Background` domain, so nothing needs restarting.
+
+`--launch` never reads the secret: it opens the window, then polls for the file.
+
+| exit | meaning | your move |
+|:--|:--|:--|
+| 0 | stash ready | consume it (below) |
+| 1 | timed out | re-launch, or fall back to the manual flow |
+| 2 | no GUI terminal (SSH, headless, container) | fall back to the manual flow |
+| 3 | bad usage | label must match `[A-Za-z0-9_-]+`; timeout a positive int |
+
+Set `--timeout` to how long the user plausibly needs. It blocks for that long,
+so never wrap it in a shorter foreground timeout.
+
+**Never run bare `pw2agent` yourself** (without `--launch`). It reads with
+`read -rs`, so with no TTY it hangs or fails, and any value it captured would be
+yours rather than the user's.
+
+### Manual fallback (exit 2, or no GUI at all)
+
+Output exactly this, then stop:
 
 ````
 ```bash
@@ -35,13 +63,12 @@ it twice, stashes it at `~/.{label}_pw` (mode 600), and copies a NOTE FOR AGENT
 to the clipboard to paste back. No preamble, no checking whether the stash
 already exists, no reading the pw2agent source.
 
-Optional, only when the wait would otherwise idle a long-running task: arm a
-background watcher on the stash path so you auto-resume when it appears, rather
-than making the user report back.
+## Consuming a stashed secret
 
-## Consuming a NOTE FOR AGENT block
+Applies to both routes: a stash you got from `--launch` (path is
+`~/.{label}_pw`), and a NOTE FOR AGENT block the user pasted.
 
-1. Read the file path from the NOTE (`File:` line, e.g. `~/.secret_pw`).
+1. Get the file path - from `--launch`'s label, or the NOTE's `File:` line.
 2. The file is base64-encoded but NOT encrypted - treat it as plaintext at rest.
 3. The decoded value must NEVER reach stdout/stderr or a tool parameter
    (tool output and tool params are recorded verbatim in the transcript):

@@ -19,6 +19,23 @@ pw2agent api_key      # stashes as ~/.api_key_pw
 
 Run `pw2agent --help` for options.
 
+### Agent mode
+
+The agent runs this itself, and you type into the window it opens:
+
+```bash
+pw2agent --launch api_key --timeout 600
+```
+
+It opens a terminal window running `pw2agent api_key`, then blocks until you
+have typed the secret - so there is no command to copy out of chat and no NOTE
+to paste back. Exits `0` when the stash is ready, `1` on timeout, `2` if there
+is no GUI terminal (SSH, headless, container), `3` on bad usage.
+
+Agent mode never reads the secret: it opens the window and polls for the file.
+On macOS it reaches the desktop session via `osascript`, so it works even from
+an agent running outside that session with no TTY of its own.
+
 ## How it works
 
 pw2agent prompts twice for your secret (silent input, no echo) and writes it
