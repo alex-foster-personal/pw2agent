@@ -70,12 +70,30 @@ printf '%s\n\n' "$AGENT_NOTE"
 _copy_to_clipboard() {
   local note="$1"
   if command -v pbcopy &>/dev/null; then
-    printf '%s' "$note" | pbcopy
+    if ! printf '%s' "$note" | pbcopy; then
+      printf '[WARN] pbcopy failed to receive the handoff note.\n' >&2
+      return 1
+    fi
+    if ! command -v pbpaste &>/dev/null; then
+      printf '[WARN] pbcopy completed, but pbpaste is unavailable for verification.\n' >&2
+      return 1
+    fi
+    if [[ "$(pbpaste)" != "$note" ]]; then
+      printf '[WARN] Clipboard verification failed after pbcopy.\n' >&2
+      return 1
+    fi
   elif [ -n "${DISPLAY:-}" ] && command -v xclip &>/dev/null; then
-    printf '%s' "$note" | xclip -selection clipboard
+    if ! printf '%s' "$note" | xclip -selection clipboard; then
+      printf '[WARN] xclip failed to receive the handoff note.\n' >&2
+      return 1
+    fi
   elif [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wl-copy &>/dev/null; then
-    printf '%s' "$note" | wl-copy
+    if ! printf '%s' "$note" | wl-copy; then
+      printf '[WARN] wl-copy failed to receive the handoff note.\n' >&2
+      return 1
+    fi
   else
+    printf '[WARN] No supported clipboard command is available.\n' >&2
     return 1
   fi
 }
@@ -83,5 +101,5 @@ _copy_to_clipboard() {
 if _copy_to_clipboard "$AGENT_NOTE"; then
   printf '📋 NOTE copied to clipboard. Paste into your agent.\n'
 else
-  printf '[No clipboard tool found — copy the NOTE above manually.]\n' >&2
+  printf '[WARN] NOTE was not copied to the clipboard. Copy the NOTE above manually.\n' >&2
 fi
