@@ -31,38 +31,83 @@ never move a secret from one to the other.
 
 ### Running it
 
-The modal is drawn by the machine's window server, so **you may run the command yourself on the
-machine the user is sitting at**. Only the person at that screen can answer it, and the value is
-returned to the script alone.
+**Run it yourself.** The modal is drawn by the machine's window server, so raising the
+question costs the user one dialog and costs you no round trip. You cannot answer it:
+only the person at that screen can.
 
 ```bash
 pw2agent pushcut --doppler PUSHCUT_API_KEY --no-stash
 ```
 
-Use a short label: it names the stash file and titles the modal, so `pushcut`, not
+Before you do, two cheap things:
+
+1. **Check whether you already have it.** `doppler secrets get NAME --project general
+   --config dev_personal --plain >/dev/null 2>&1` (or `op item get "<title>"`) exits 0 if
+   it is already stored. Do not interrupt the user for a secret they have given before.
+2. **Say in chat, in one line, what you are asking for and why, before the dialog appears.**
+   The modal shows only your label and prompt, so an unexplained password box titled
+   `pushcut` gives the user no grounds to trust it. `--prompt "TEXT"` sets the wording.
+
+Use a short label: it titles the modal and names the stash file, so `pushcut`, not
 `pushcut_api_key_for_agent1`.
 
-Two cases where you must NOT just run it:
+Exit codes, which is how you tell the three outcomes apart:
 
-- **A remote or headless host** (an ssh session, agentbox, a background job) has no window
-  server. The command exits 2 with `no window server is reachable here` rather than hanging.
-  There, emit the command in a bash block for the user to run on their own machine instead.
-- **The user is away.** A modal nobody answers blocks your shell until it is dismissed. Run it
-  in the background, or say you are about to raise it, if you are not sure they are there.
+| Code | Meaning | What to do |
+|:--|:--|:--|
+| 0 | stored, and verified in each destination | carry on |
+| 1 | the user cancelled, or a destination failed (the message says which) | do not retry blindly; a cancel is an answer |
+| 2 | nothing here can ask: no window server and no TTY | see below |
 
-Say in one line what you are asking for and why, then run it. No preamble, no checking whether
-the stash already exists, no reading the pw2agent source.
+**Exit 2 means you are on the wrong machine.** A remote or headless host (an ssh session,
+agentbox, a background job) has no window server, and the command says so instead of
+hanging. Do not work around it: give the user the command in a bash block to run **on
+their own machine**, and pick a destination they and you can both reach. `--doppler` and
+`--op` are shared stores; **the stash file is machine-local**, so a stash written on their
+Mac is invisible to an agent on another host. That makes `--doppler NAME --no-stash` the
+only sane form for a remote handoff.
 
-Optional, only when the wait would otherwise idle a long-running task: arm a background watcher
-on the stash path (or poll `doppler secrets get`) so you auto-resume when it lands, rather than
-making the user report back.
+**If the user may be away**, a modal nobody answers blocks your shell until it is
+dismissed. Run it with `&` and poll the destination, rather than stalling the turn:
+
+```bash
+pw2agent pushcut --doppler PUSHCUT_API_KEY --no-stash &
+until doppler secrets get PUSHCUT_API_KEY --project general --config dev_personal --plain >/dev/null 2>&1; do sleep 20; done
+```
+
+### Reading it back
+
+The rules in "Consuming a NOTE FOR AGENT block" about never printing a value apply to
+**every** path, not just the stash. From a store, inject rather than print:
+
+```bash
+doppler run --project general --config dev_personal -- ./script.py        # preferred
+API_KEY=$(doppler secrets get PUSHCUT_API_KEY --project general --config dev_personal --plain) ./script.py
+op read "op://Personal/<item>/password" | some-cli --secret-stdin
+```
+
+Never run a bare `doppler secrets get ... --plain` or `op read` on its own: the value lands
+in the transcript as tool output.
+
+### Flags worth knowing
+
+- `--no-stash` is not the default. Without it you get the stash file **as well as** the
+  store, which is a second copy at rest with a NOTE and an `rm -f` to remember. Pass it
+  whenever you name a destination.
+- `--doppler` **overwrites** an existing key (that is how rotation works), so check first
+  if you did not intend to replace one. `--op` refuses an item that already exists.
+- The clipboard is only touched on the stash path, to carry the NOTE. With `--no-stash`
+  nothing goes to the clipboard.
+- `pw2agent` installs to `~/.local/bin`. If the bare name is not found, call
+  `~/.local/bin/pw2agent`, or re-run `afmac/scripts/setup_nested_repos.sh` to install it.
 
 ### What stays off limits, modal or not
 
-Alex types these into the 1Password app himself, and you never script them in: card numbers,
-bank account numbers, sort codes, IBANs, 2FA secret keys, and 1Password's own Secret Key.
-`pw2agent --op` is for a new, ordinary credential item, and it refuses to touch an item that
-already exists (editing one would put the value in argv, where `ps` can read it).
+Alex types these into the 1Password app himself, and you never script them in: card
+numbers, bank account numbers, sort codes, IBANs, 2FA secret keys, and 1Password's own
+Secret Key. `pw2agent --op` is for a new, ordinary credential item, and it refuses to
+touch an item that already exists (editing one would put the value in argv, where `ps`
+can read it).
 
 ## Consuming a NOTE FOR AGENT block
 
@@ -99,4 +144,5 @@ that store at the moment you need it.
 The modal is AppleScript on macOS, zenity or kdialog on Linux with a display, and a WinForms
 dialog on Windows. `pw2agent` is a bash script, so on Windows the user runs it from Git Bash,
 not PowerShell; its clipboard step uses `clip.exe`. `--tty` forces the old terminal prompt,
-which needs a real TTY and is therefore the user's path, never yours.
+which needs a real TTY and is therefore the user's path, never yours. `base64 -d` works on
+macOS, Linux and Git Bash alike.
