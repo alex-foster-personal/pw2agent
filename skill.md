@@ -31,9 +31,14 @@ never move a secret from one to the other.
 
 ### Running it
 
-**Run it yourself.** The modal is drawn by the machine's window server, so raising the
-question costs the user one dialog and costs you no round trip. You cannot answer it:
-only the person at that screen can.
+**First: are you on the machine the user is sitting at?** If your shell is an ssh session,
+a headless box (agentbox), or a background job, skip to "When you are on the wrong
+machine" below. `[ -n "$SSH_CONNECTION" ]` is the quick tell. Running it there anyway is
+harmless - it exits 2 immediately rather than hanging - but do not make that your check.
+
+**On the user's own machine, run it yourself.** The modal is drawn by that machine's
+window server, so raising the question costs one dialog and no round trip. You cannot
+answer it: only the person at that screen can.
 
 ```bash
 pw2agent pushcut --doppler PUSHCUT_API_KEY --no-stash
@@ -43,13 +48,19 @@ Before you do, two cheap things:
 
 1. **Check whether you already have it.** `doppler secrets get NAME --project general
    --config dev_personal --plain >/dev/null 2>&1` (or `op item get "<title>"`) exits 0 if
-   it is already stored. Do not interrupt the user for a secret they have given before.
+   it is already stored. Do not interrupt the user for a secret they have given before -
+   and note `--doppler` OVERWRITES, so this same check is what stops you clobbering a
+   working credential when you only meant to add one.
 2. **Say in chat, in one line, what you are asking for and why, before the dialog appears.**
    The modal shows only your label and prompt, so an unexplained password box titled
    `pushcut` gives the user no grounds to trust it. `--prompt "TEXT"` sets the wording.
 
 Use a short label: it titles the modal and names the stash file, so `pushcut`, not
-`pushcut_api_key_for_agent1`.
+`pushcut_api_key_for_agent1`. The Doppler NAME is separate and should be descriptive
+UPPER_SNAKE (`PUSHCUT_API_KEY`, `HETZNER_API_TOKEN`) - name it in your chat line too, so
+the user can check afterwards where it landed. Project/config default to
+`general`/`dev_personal`, which is the home for anything personal to this Mac; work
+credentials belong in `construct`/`dev_af` (`--project construct --config dev_af`).
 
 Exit codes, which is how you tell the three outcomes apart:
 
@@ -67,13 +78,26 @@ their own machine**, and pick a destination they and you can both reach. `--dopp
 Mac is invisible to an agent on another host. That makes `--doppler NAME --no-stash` the
 only sane form for a remote handoff.
 
+Shared does not mean reachable: the round trip the command verifies happens on THEIR
+machine, and proves nothing about yours. Confirm your own host can read the store first
+(`doppler configure get token` / a redirected `doppler secrets get`) and fix that before
+asking, or the user answers a dialog for a value you still cannot use.
+
 **If the user may be away**, a modal nobody answers blocks your shell until it is
-dismissed. Run it with `&` and poll the destination, rather than stalling the turn:
+dismissed. Run it detached and poll the destination, rather than stalling the turn:
 
 ```bash
-pw2agent pushcut --doppler PUSHCUT_API_KEY --no-stash &
-until doppler secrets get PUSHCUT_API_KEY --project general --config dev_personal --plain >/dev/null 2>&1; do sleep 20; done
+pw2agent pushcut --doppler PUSHCUT_API_KEY --no-stash &        # same machine as you
+for _ in $(seq 60); do   # 20 minutes, then give up and say so
+  doppler secrets get PUSHCUT_API_KEY --project general --config dev_personal --plain >/dev/null 2>&1 && break
+  sleep 20
+done
 ```
+
+The same poll is how you wait in the remote case, where only the poll runs on your host and
+the `pw2agent` line runs on the user's machine. **You never see their exit code there**: a
+cancelled modal looks exactly like a slow one, so always bound the wait and report an
+unanswered ask rather than spinning.
 
 ### Reading it back
 
@@ -82,12 +106,13 @@ The rules in "Consuming a NOTE FOR AGENT block" about never printing a value app
 
 ```bash
 doppler run --project general --config dev_personal -- ./script.py        # preferred
-API_KEY=$(doppler secrets get PUSHCUT_API_KEY --project general --config dev_personal --plain) ./script.py
+HCLOUD_TOKEN=$(doppler secrets get HETZNER_API_TOKEN --project general --config dev_personal --plain) hcloud server list  # when the CLI wants a different var name than the key
 op read "op://Personal/<item>/password" | some-cli --secret-stdin
 ```
 
 Never run a bare `doppler secrets get ... --plain` or `op read` on its own: the value lands
-in the transcript as tool output.
+in the transcript as tool output. Redirected to `/dev/null` it is an existence check, not a
+read, which is why the probe and the poll below are safe.
 
 ### Flags worth knowing
 
@@ -98,6 +123,8 @@ in the transcript as tool output.
   if you did not intend to replace one. `--op` refuses an item that already exists.
 - The clipboard is only touched on the stash path, to carry the NOTE. With `--no-stash`
   nothing goes to the clipboard.
+- `--prompt "TEXT"` sets the modal wording. Use it: the dialog otherwise shows only the
+  label, and the user is deciding whether an unexpected password box is legitimate.
 - `pw2agent` installs to `~/.local/bin`. If the bare name is not found, call
   `~/.local/bin/pw2agent`, or re-run `afmac/scripts/setup_nested_repos.sh` to install it.
 
