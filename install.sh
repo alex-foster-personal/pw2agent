@@ -3,6 +3,7 @@ set -euo pipefail
 
 # ---- config ----
 INSTALL_DIR="$HOME/.local/bin"
+LIB_DIR="$HOME/.local/lib/pw2agent"
 SCRIPT_NAME="pw2agent"
 GITHUB_RAW="https://raw.githubusercontent.com/alexfosterinvisible/pw2agent/main"
 # shellcheck disable=SC2016
@@ -29,6 +30,15 @@ main() {
   mkdir -p "$INSTALL_DIR"
   cp "$SCRIPT_SRC" "$INSTALL_DIR/$SCRIPT_NAME"
   chmod +x "$INSTALL_DIR/$SCRIPT_NAME"
+
+  # pw2agent sources lib/prompt.sh (the modal). Installed beside the binary so the
+  # command works from anywhere, not only from inside a checkout.
+  mkdir -p "$LIB_DIR"
+  if [[ -f "$(dirname "$SCRIPT_SRC")/lib/prompt.sh" ]]; then
+    cp "$(dirname "$SCRIPT_SRC")/lib/prompt.sh" "$LIB_DIR/prompt.sh"
+  else
+    curl -fsSL "$GITHUB_RAW/lib/prompt.sh" -o "$LIB_DIR/prompt.sh"
+  fi
 
   if ! grep -qF '# pw2agent' "$RC_FILE" 2>/dev/null; then
     printf '\n%s\n' "$PATH_LINE" >> "$RC_FILE"

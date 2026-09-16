@@ -1,57 +1,178 @@
 #!/usr/bin/env bash
+# pw2agent -- hand a secret to an agent without it passing through the chat.
+#
+# The human answers a GUI modal on the machine's own screen. The value goes straight to
+# the destinations named on the command line and is never printed, never written to shell
+# history, and never appears in the agent's transcript.
 set -euo pipefail
 { set +x; } 2>/dev/null
 
-# ---- help ----
-case "${1:-}" in
-  -h|--help)
-    printf 'Usage: pw2agent [label]\n'
-    printf '  label  name for the secret (default: secret)\n'
-    printf '         writes to ~/.{label}_pw, mode 600\n'
-    printf '\nExamples:\n'
-    printf '  pw2agent            # stashes as ~/.secret_pw\n'
-    printf '  pw2agent api_key    # stashes as ~/.api_key_pw\n'
-    exit 0
-    ;;
-esac
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/prompt.sh
+if [ -f "$SELF_DIR/lib/prompt.sh" ]; then
+  . "$SELF_DIR/lib/prompt.sh"
+elif [ -f "$HOME/.local/lib/pw2agent/prompt.sh" ]; then
+  . "$HOME/.local/lib/pw2agent/prompt.sh"
+else
+  printf '[ERROR] cannot find lib/prompt.sh; re-run pw2agent install.sh\n' >&2
+  exit 1
+fi
 
-# ---- config ----
-LABEL="${1:-secret}"
+#----- usage -----------------------------------------------------------------
+
+_usage() {
+  cat <<'TXT'
+Usage: pw2agent [label] [--doppler NAME] [--op ITEM] [--no-stash] [--prompt TEXT]
+
+A modal asks for the secret on this machine's screen. It then goes to whichever
+destinations you name; with none, it is stashed at ~/.{label}_pw (mode 600) and a
+NOTE FOR AGENT is copied to the clipboard.
+
+  label            name for the secret (default: secret)
+  --doppler NAME   store in Doppler as NAME (UPPER_SNAKE), round-trip verified.
+                   Project/config default to general/dev_personal; override with
+                   --project / --config. This is the home for agent and app secrets.
+  --op ITEM        create a 1Password Password item titled ITEM in --vault
+                   (default Personal). For Alex's own logins. An EXISTING item is
+                   never edited from here -- paste into the 1Password app instead.
+  --no-stash       do not write ~/.{label}_pw (use with --doppler / --op)
+  --prompt TEXT    wording shown in the modal
+  --tty            force the terminal prompt instead of the modal
+
+Examples:
+  pw2agent api_key                                  # modal -> stash + clipboard NOTE
+  pw2agent --doppler PUSHCUT_API_KEY --no-stash     # modal -> Doppler only
+  pw2agent --op "Starling - card PIN" --no-stash    # modal -> 1Password only
+TXT
+}
+
+#----- config ----------------------------------------------------------------
+
+LABEL=""
+DOPPLER_NAME=""
+OP_ITEM=""
+PROJECT="general"
+CONFIG="dev_personal"
+VAULT="Personal"
+PROMPT_TEXT=""
+STASH=true
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help)   _usage; exit 0 ;;
+    --doppler)   DOPPLER_NAME="${2:?--doppler needs a NAME}"; shift 2 ;;
+    --op)        OP_ITEM="${2:?--op needs an item title}"; shift 2 ;;
+    --project)   PROJECT="${2:?--project needs a value}"; shift 2 ;;
+    --config)    CONFIG="${2:?--config needs a value}"; shift 2 ;;
+    --vault)     VAULT="${2:?--vault needs a value}"; shift 2 ;;
+    --prompt)    PROMPT_TEXT="${2:?--prompt needs text}"; shift 2 ;;
+    --no-stash)  STASH=false; shift ;;
+    --tty)       export PW2AGENT_INPUT=tty; shift ;;
+    -*)          printf '[ERROR] unknown option: %s\n' "$1" >&2; _usage >&2; exit 2 ;;
+    *)           LABEL="$1"; shift ;;
+  esac
+done
+
+LABEL="${LABEL:-secret}"
 TARGET="$HOME/.${LABEL}_pw"
 
-# ---- banner ----
-printf '\npw2agent: stashing "%s" → %s\n\n' "$LABEL" "$TARGET"
-
-# ---- input ----
-printf 'Enter secret:   '; read -rs PW1; printf '\n'
-printf 'Confirm secret: '; read -rs PW2; printf '\n'
-
-# ---- validate ----
-if [[ "$PW1" != "$PW2" ]]; then
-    printf '❌ Secrets don'\''t match. Nothing written.\n' >&2
-    unset PW1 PW2
-    exit 1
+if [ "$STASH" = false ] && [ -z "$DOPPLER_NAME" ] && [ -z "$OP_ITEM" ]; then
+  printf '[ERROR] --no-stash with no --doppler and no --op leaves nowhere to put it\n' >&2
+  exit 2
 fi
-if [[ -z "$PW1" ]]; then
-    printf '❌ Empty secret. Nothing written.\n' >&2
-    unset PW1 PW2
-    exit 1
+if [ -n "$DOPPLER_NAME" ] && ! printf '%s' "$DOPPLER_NAME" | grep -Eq '^[A-Z_][A-Z0-9_]*$'; then
+  printf '[ERROR] --doppler NAME must be UPPER_SNAKE (got: %s)\n' "$DOPPLER_NAME" >&2
+  exit 2
 fi
 
-# ---- write ----
-umask 077
-trap 'rm -f "$TARGET"' EXIT INT TERM
-printf '%s' "$PW1" | base64 | tr -d '\n' > "$TARGET"
-trap - EXIT INT TERM
-unset PW1 PW2
+#----- destinations ----------------------------------------------------------
+# Each takes the value on STDIN so it never reaches argv, where `ps` would show it.
 
-# ---- confirm ----
-BYTES=$(wc -c < "$TARGET")
-MODE=$(stat -f '%Lp' "$TARGET" 2>/dev/null || stat -c '%a' "$TARGET")
-printf '✅ Stashed at: %s (%s bytes, mode %s)\n\n' "$TARGET" "$BYTES" "$MODE"
+_store_doppler() {
+  local name="$1" value len got
+  value="$(cat)"
+  command -v doppler >/dev/null 2>&1 || { printf '[ERROR] doppler is not installed\n' >&2; return 1; }
+  # doppler reads the value from STDIN when none is given on the CLI, and its normal
+  # output table ECHOES the value, so it is silenced rather than merely redirected.
+  printf '%s' "$value" | doppler secrets set "$name" -p "$PROJECT" -c "$CONFIG" \
+    --no-interactive --silent >/dev/null 2>&1 || {
+      printf '[ERROR] doppler secrets set failed for %s\n' "$name" >&2; return 1; }
+  got="$(doppler secrets get "$name" -p "$PROJECT" -c "$CONFIG" --plain 2>/dev/null | tr -d '\n')"
+  len=${#value}
+  [ "${#got}" -eq "$len" ] || { printf '[ERROR] %s round-trip mismatch\n' "$name" >&2; return 1; }
+  printf '[OK] doppler %s/%s :: %s (%s chars)\n' "$PROJECT" "$CONFIG" "$name" "$len"
+}
 
-# ---- note ----
-LABEL_UPPER=$(printf '%s' "$LABEL" | tr '[:lower:]' '[:upper:]')
+_store_1password() {
+  local title="$1" value
+  value="$(cat)"
+  command -v op >/dev/null 2>&1 || { printf '[ERROR] op (1Password CLI) is not installed\n' >&2; return 1; }
+  if op item get "$title" --vault "$VAULT" >/dev/null 2>&1; then
+    printf '[ERROR] "%s" already exists in %s. Editing an existing item from here would\n' "$title" "$VAULT" >&2
+    printf '        put the value in argv; paste it in the 1Password app instead.\n' >&2
+    return 1
+  fi
+  # `op item create -` takes a JSON template on STDIN. An assignment statement
+  # (password=...) would put the value in argv, which op's own help warns about.
+  local json
+  json="$(printf '%s' "$value" | OP_TITLE="$title" python3 -c '
+import json, os, sys
+print(json.dumps({
+    "title": os.environ["OP_TITLE"],
+    "category": "PASSWORD",
+    "fields": [{"id": "password", "type": "CONCEALED", "purpose": "PASSWORD",
+                "label": "password", "value": sys.stdin.read()}],
+}))')" || { printf '[ERROR] could not build the 1Password template\n' >&2; return 1; }
+
+  printf '%s' "$json" | op item create - --vault "$VAULT" >/dev/null 2>&1 || {
+    printf '[ERROR] op item create failed for "%s"\n' "$title" >&2; return 1; }
+  # op has printed success while the app was locked and created nothing, so re-list.
+  op item get "$title" --vault "$VAULT" >/dev/null 2>&1 || {
+    printf '[ERROR] "%s" is not in %s after create; the app may have been locked\n' "$title" "$VAULT" >&2
+    return 1; }
+  printf '[OK] 1password %s :: %s\n' "$VAULT" "$title"
+}
+
+_stash_file() {
+  local value
+  value="$(cat)"
+  umask 077
+  printf '%s' "$value" | base64 | tr -d '\n' > "$TARGET"
+  printf '[OK] stashed %s (%s bytes, mode %s)\n' "$TARGET" \
+    "$(wc -c < "$TARGET" | tr -d ' ')" \
+    "$(stat -f '%Lp' "$TARGET" 2>/dev/null || stat -c '%a' "$TARGET")"
+}
+
+#----- ask -------------------------------------------------------------------
+
+DEST_SUMMARY=""
+if [ "$STASH" = true ];    then DEST_SUMMARY="the agent stash"; fi
+if [ -n "$DOPPLER_NAME" ]; then DEST_SUMMARY="${DEST_SUMMARY:+$DEST_SUMMARY, }Doppler ($DOPPLER_NAME)"; fi
+if [ -n "$OP_ITEM" ];      then DEST_SUMMARY="${DEST_SUMMARY:+$DEST_SUMMARY, }1Password ($OP_ITEM)"; fi
+PROMPT_TEXT="${PROMPT_TEXT:-Paste the value for \"$LABEL\".}"
+
+printf '\npw2agent: asking for "%s" -> %s\n' "$LABEL" "$DEST_SUMMARY"
+
+# The value lives in one variable for the length of this script and is piped from there.
+# It is never echoed, never an argument, and the shell is not tracing.
+SECRET="$(read_secret "$PROMPT_TEXT" "pw2agent: $LABEL")" || exit $?
+
+rc=0
+if [ "$STASH" = true ];    then printf '%s' "$SECRET" | _stash_file || rc=1; fi
+if [ -n "$DOPPLER_NAME" ]; then printf '%s' "$SECRET" | _store_doppler "$DOPPLER_NAME" || rc=1; fi
+if [ -n "$OP_ITEM" ];      then printf '%s' "$SECRET" | _store_1password "$OP_ITEM" || rc=1; fi
+unset SECRET
+
+[ "$rc" -eq 0 ] || { printf '[ERROR] one or more destinations failed\n' >&2; exit 1; }
+
+#----- handoff note (stash path only) ----------------------------------------
+
+if [ "$STASH" = false ]; then
+  printf '\nNothing to hand over: the agent reads it from its store, not from a file.\n'
+  exit 0
+fi
+
+LABEL_UPPER=$(printf '%s' "$LABEL" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9_' '_')
 AGENT_NOTE="> NOTE FOR AGENT -- secret handoff
 > Label:    ${LABEL}
 > File:     ~/.${LABEL}_pw    (mode 600, base64-encoded, NOT encrypted)
@@ -62,44 +183,32 @@ AGENT_NOTE="> NOTE FOR AGENT -- secret handoff
 >           to Doppler before deleting -- descriptive UPPERCASE_SNAKE name
 >           (e.g. ${LABEL_UPPER}_PASSWORD), default general/dev_personal:
 >           base64 -d < ~/.${LABEL}_pw | ~/.claude/skills/doppler-secrets/scripts/store_secret.sh NAME general dev_personal
+>           (or re-run: pw2agent ${LABEL} --doppler ${LABEL_UPPER} --no-stash)
 > Delete:   rm -f ~/.${LABEL}_pw"
 
-printf '%s\n\n' "$AGENT_NOTE"
+printf '\n%s\n\n' "$AGENT_NOTE"
 
-# ---- clipboard ----
+#----- clipboard -------------------------------------------------------------
+
 _copy_to_clipboard() {
   local note="$1"
-  if command -v pbcopy &>/dev/null; then
-    if ! printf '%s' "$note" | pbcopy; then
-      printf '[WARN] pbcopy failed to receive the handoff note.\n' >&2
-      return 1
-    fi
-    if ! command -v pbpaste &>/dev/null; then
-      printf '[WARN] pbcopy completed, but pbpaste is unavailable for verification.\n' >&2
-      return 1
-    fi
-    if [[ "$(pbpaste)" != "$note" ]]; then
-      printf '[WARN] Clipboard verification failed after pbcopy.\n' >&2
-      return 1
-    fi
-  elif [ -n "${DISPLAY:-}" ] && command -v xclip &>/dev/null; then
-    if ! printf '%s' "$note" | xclip -selection clipboard; then
-      printf '[WARN] xclip failed to receive the handoff note.\n' >&2
-      return 1
-    fi
-  elif [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wl-copy &>/dev/null; then
-    if ! printf '%s' "$note" | wl-copy; then
-      printf '[WARN] wl-copy failed to receive the handoff note.\n' >&2
-      return 1
-    fi
+  if command -v pbcopy >/dev/null 2>&1; then
+    printf '%s' "$note" | pbcopy || { printf '[WARN] pbcopy failed.\n' >&2; return 1; }
+    command -v pbpaste >/dev/null 2>&1 || { printf '[WARN] no pbpaste to verify with.\n' >&2; return 1; }
+    [ "$(pbpaste)" = "$note" ] || { printf '[WARN] clipboard verification failed.\n' >&2; return 1; }
+  elif [ -n "${DISPLAY:-}" ] && command -v xclip >/dev/null 2>&1; then
+    printf '%s' "$note" | xclip -selection clipboard || { printf '[WARN] xclip failed.\n' >&2; return 1; }
+  elif [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wl-copy >/dev/null 2>&1; then
+    printf '%s' "$note" | wl-copy || { printf '[WARN] wl-copy failed.\n' >&2; return 1; }
+  elif command -v clip.exe >/dev/null 2>&1; then
+    printf '%s' "$note" | clip.exe || { printf '[WARN] clip.exe failed.\n' >&2; return 1; }
   else
-    printf '[WARN] No supported clipboard command is available.\n' >&2
-    return 1
+    printf '[WARN] no supported clipboard command.\n' >&2; return 1
   fi
 }
 
 if _copy_to_clipboard "$AGENT_NOTE"; then
-  printf '📋 NOTE copied to clipboard. Paste into your agent.\n'
+  printf '[OK] NOTE copied to the clipboard. Paste it to your agent.\n'
 else
-  printf '[WARN] NOTE was not copied to the clipboard. Copy the NOTE above manually.\n' >&2
+  printf '[WARN] NOTE was not copied; copy the block above by hand.\n' >&2
 fi
